@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../references.dart';
+import 'posts_reference_provider.dart';
 
-final postsProvider = StreamProvider((_) {
-  return postsReferenceWithConverter.orderBy('createdAt').snapshots();
+///全投稿データをstreamで提供するprovider
+final postsProvider = StreamProvider((ref) {
+  final postsReference = ref.read(postsReferenceProvider);
+  return postsReference.orderBy('createdAt').snapshots();
 });
