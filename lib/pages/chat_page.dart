@@ -1,20 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/post/post.dart';
+import '../providers/post_provider.dart';
 import '../references.dart';
 import '../widgets/post_widget.dart';
 import 'profile_page.dart';
 
-class ChatPage extends StatefulWidget {
-  const ChatPage({super.key});
+class ChatPage extends ConsumerStatefulWidget {
+  const ChatPage({Key? key}) : super(key: key);
 
   @override
-  State<ChatPage> createState() => _ChatPageState();
+  ConsumerState<ChatPage> createState() => _ChatPageState();
 }
 
-class _ChatPageState extends State<ChatPage> {
+class _ChatPageState extends ConsumerState<ChatPage> {
   Future<void> sendPost(String text) async {
     // まずは user という変数にログイン中のユーザーデータを格納します
     final user = FirebaseAuth.instance.currentUser!;
@@ -68,7 +70,8 @@ class _ChatPageState extends State<ChatPage> {
                 Navigator.of(context).push(
                   MaterialPageRoute(
                     builder: (context) {
-                      return const ProfilePage();
+                      // return const ProfilePage();
+                      return const ChatPage();
                     },
                   ),
                 );
@@ -84,29 +87,54 @@ class _ChatPageState extends State<ChatPage> {
         body: Column(
           children: [
             Expanded(
-              child: StreamBuilder<QuerySnapshot<Post>>(
-                // stream プロパティに snapshots() を与えると、コレクションの中のドキュメントをリアルタイムで監視することができます。
-                stream: postsReferenceWithConverter
-                    .orderBy('createdAt')
-                    .snapshots(),
-                // ここで受け取っている snapshot に stream で流れてきたデータ入っています。
-                builder: (context, snapshot) {
-                  // docs には Collection に保存されたすべてのドキュメントが入ります。
-                  // 取得までには時間がかかるのではじめは null が入っています。
-                  // null の場合は空配列が代入されるようにしています。
-                  final docs = snapshot.data?.docs ?? [];
-                  return ListView.builder(
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      // data() に Post インスタンスが入っています。
-                      // これは withConverter を使ったことにより得られる恩恵です。
-                      // 何もしなければこのデータ型は Map になります。
-                      final post = docs[index].data();
-                      return PostWidget(post: post);
-                    },
-                  );
-                },
+              child: ref.watch(postsProvider).when(
+                  //データが入ってきた場合
+                  data: (data) {
+                    return ListView.builder(
+                        itemBuilder: (context, index) {
+                          final post = data.docs[index].data();
+                          return PostWidget(post: post);
+                        },
+                    );
+                  },
+                  //エラーになった場合
+                  error: (e, s) {
+                    return const Center(
+                      child: Text('不具合が発生しました。'),
+                    );
+                  },
+                  //データを読み込み中の場合によばれる。
+                  loading: () {
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
               ),
+
+
+              // StreamBuilder<QuerySnapshot<Post>>(
+              //   // stream プロパティに snapshots() を与えると、コレクションの中のドキュメントをリアルタイムで監視することができます。
+              //   stream: postsReferenceWithConverter
+              //       .orderBy('createdAt')
+              //       .snapshots(),
+              //   // ここで受け取っている snapshot に stream で流れてきたデータ入っています。
+              //   builder: (context, snapshot) {
+              //     // docs には Collection に保存されたすべてのドキュメントが入ります。
+              //     // 取得までには時間がかかるのではじめは null が入っています。
+              //     // null の場合は空配列が代入されるようにしています。
+              //     final docs = snapshot.data?.docs ?? [];
+              //     return ListView.builder(
+              //       itemCount: docs.length,
+              //       itemBuilder: (context, index) {
+              //         // data() に Post インスタンスが入っています。
+              //         // これは withConverter を使ったことにより得られる恩恵です。
+              //         // 何もしなければこのデータ型は Map になります。
+              //         final post = docs[index].data();
+              //         return PostWidget(post: post);
+              //       },
+              //     );
+              //   },
+              // ),
             ),
             Padding(
               padding: const EdgeInsets.all(8),
